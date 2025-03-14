@@ -1,0 +1,184 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Powerchart - Gunbound Style</title>
+    <style>
+       @import url('https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap');
+
+body {
+    background: linear-gradient(45deg, #0a0a0a, #1c1c1c);
+    font-family: 'Press Start 2P', sans-serif;
+    color: white;
+    text-align: center;
+    user-select: none;
+}
+
+.container {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 20px;
+    padding: 20px;
+}
+
+.input-container {
+    background: #222;
+    padding: 15px;
+    border-radius: 10px;
+    border: 3px solid #FFD700;
+    box-shadow: 0 0 10px rgba(255, 215, 0, 0.9);
+    width: 250px;
+}
+
+.value-display {
+    background: #111;
+    padding: 15px;
+    border-radius: 10px;
+    border: 3px solid #00FFFF;
+    box-shadow: 0 0 10px rgba(0, 255, 255, 0.8);
+    width: 250px;
+}
+
+input, select {
+    background: #333;
+    color: white;
+    border: 2px solid #FFD700;
+    padding: 8px;
+    margin: 5px;
+    font-size: 14px;
+    width: 80%;
+}
+
+canvas {
+    background: radial-gradient(circle, #222, #111);
+    border: 3px solid #FFD700;
+    border-radius: 10px;
+    box-shadow: 0 0 15px rgba(255, 215, 0, 0.8);
+    margin-top: 10px;
+}
+    </style>
+</head>
+<body>
+
+  <div class="container">
+    <div class="input-container">
+        <h3>Selecciona valores</h3>
+        <input type="number" id="distance" placeholder="Distancia (m)">
+        <select id="selectValue">
+            <option value="65">65°</option>
+            <option value="70">70°</option>
+            <option value="75">75°</option>
+            <option value="80">80°</option>
+        </select>
+    </div>
+
+    <div class="input-container">
+        <h3>Velocidad del Viento</h3>
+        <input type="number" id="windSpeed" placeholder="Viento (m/s)">
+    </div>
+
+    <canvas id="chartCanvas" width="400" height="400"></canvas>
+
+    <div class="value-display">
+        <h2>Valor Power</h2>
+        <h2 id="calculatedValue">--</h2>
+    </div>
+
+    <div class="value-display">
+        <h2>Valor Gráfico</h2>
+        <h2 id="graphicValue">--</h2>
+    </div>
+
+    <div class="value-display">
+        <h2>Resultado Final</h2>
+        <h2 id="finalResult">--</h2>
+    </div>
+</div>
+
+    <script>
+        const canvas = document.getElementById("chartCanvas");
+        const ctx = canvas.getContext("2d");
+        const centerX = canvas.width / 2;
+        const centerY = canvas.height / 2;
+        const radius = 140;
+        const values = [0.005, 0, 0.003, 0.006, 0.003, 0.014, 0.018, 0.018, 0.02, 0.02, 0.02, 0.02, 0.02, 0.015, 0.01, 0.01, 0.005, 0, 0.003, 0.006, 0.009, 0.014, 0.018, 0.018, 0.02];
+        const angleStep = (2 * Math.PI) / values.length;
+        let selectedPoint = null;
+        const points = [];
+
+        const valuesJSON = {
+            "65": { "1": 0.6, "2": 0.67, "3": 1.07, "4": 1.23, "5": 1.38 },
+            "70": { "1": 0.65, "2": 0.95, "3": 1.16, "4": 1.35, "5": 1.5 },
+            "75": { "1": 0.76, "2": 1.08, "3": 1.32, "4": 1.53, "5": 1.71 },
+            "80": { "1": 0.92, "2": 1.33, "3": 1.06, "4": 1.85, "5": 2.06 }
+        };
+
+        function drawChart() {
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            ctx.strokeStyle = "#FFD700";
+            ctx.lineWidth = 2;
+            points.length = 0;
+
+            for (let i = 0; i < values.length; i++) {
+                const angle = i * angleStep - Math.PI / 2;
+                const x = centerX + (radius + 10) * Math.cos(angle);
+                const y = centerY + (radius + 10) * Math.sin(angle);
+                points.push({ x, y, value: values[i] });
+
+                ctx.fillStyle = "#FFD700";
+                ctx.font = "bold 12px Arial";
+                ctx.fillText(values[i].toFixed(3), x - 10, y);
+
+                ctx.fillStyle = (selectedPoint && selectedPoint.x === x && selectedPoint.y === y) ? "#FF4500" : "#00FFFF";
+                ctx.beginPath();
+                ctx.arc(x, y, 6, 0, 2 * Math.PI);
+                ctx.fill();
+            }
+        }
+
+        drawChart();
+
+        const calculatedValue = document.getElementById("calculatedValue");
+        const graphicValue = document.getElementById("graphicValue");
+        const finalResult = document.getElementById("finalResult");
+        const windSpeedInput = document.getElementById("windSpeed");
+
+        function updateValue() {
+            const angle = document.getElementById("selectValue").value;
+            const distance = document.getElementById("distance").value;
+
+            if (valuesJSON[angle] && valuesJSON[angle][distance]) {
+                calculatedValue.innerText = valuesJSON[angle][distance];
+            } else {
+                calculatedValue.innerText = "--";
+            }
+        }
+
+        canvas.addEventListener("click", function(event) {
+            const rect = canvas.getBoundingClientRect();
+            const mouseX = event.clientX - rect.left;
+            const mouseY = event.clientY - rect.top;
+            const windSpeed = parseFloat(windSpeedInput.value) || 0;
+            const powerValue = parseFloat(calculatedValue.innerText) || 0;
+
+            for (const point of points) {
+                const dx = mouseX - point.x;
+                const dy = mouseY - point.y;
+                if (Math.sqrt(dx * dx + dy * dy) < 8) {
+                    selectedPoint = point;
+                    graphicValue.innerText = point.value.toFixed(3);
+                    finalResult.innerText = ((windSpeed * point.value) + powerValue).toFixed(3);
+                    drawChart();
+                    break;
+                }
+            }
+        });
+
+        document.getElementById("selectValue").addEventListener("change", updateValue);
+        document.getElementById("distance").addEventListener("input", updateValue);
+    </script>
+
+</body>
+</html>
