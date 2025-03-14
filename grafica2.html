@@ -1,0 +1,141 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Cálculo de Viento</title>
+  <style>
+    canvas {
+      border: 1px solid #ccc;
+      background: #fafafa;
+      display: block;
+      margin: 10px auto;
+    }
+    #info, #result, #result2 {
+      width: 500px;
+      margin: 10px auto;
+      text-align: center;
+      font-family: Arial, sans-serif;
+      font-size: 16px;
+      color: #333;
+      border: 1px solid #ccc;
+      padding: 10px;
+    }
+    .controls {
+      width: 500px;
+      margin: 10px auto;
+      text-align: center;
+      font-family: Arial, sans-serif;
+    }
+    .controls > div {
+      margin-bottom: 10px;
+    }
+  </style>
+</head>
+<body>
+  <div class="controls">
+    <div>
+      <label for="dataSelect">Selecciona un conjunto de datos: </label>
+      <select id="dataSelect"></select>
+    </div>
+    <div>
+      <label for="windInput">Valor del viento: </label>
+      <input type="number" id="windInput" placeholder="Ingresa el valor del viento">
+    </div>
+  </div>
+  <canvas id="dataCanvas" width="500" height="500"></canvas>
+  <div id="info">Haz clic en un punto para ver su valor</div>
+  <div id="result">VIENTO A FAVOR: </div>
+  <div id="result2">VIENTO EN CONTRA: </div>
+  <script>
+    const datasets = {
+      65: [0.70, 0.50, 0.20, 0.20, 0.50, 0.90, 0.90, 0.90, 0.90, 0.65, 0.03, 0.01, 0.04, 0.06, 0.08, 0.085],
+      70: [0.60, 0.50, 0.25, 0.05, 0.25, 0.50, 0.60, 0.65, 0.65, 0.50, 0.35, 0.10, 0.2, 0.45, 0.65, 0.70],
+      75: [0.85, 0.65, 0.45, 0.25, 0.55, 0.35, 0.95, 0.80, 0.78, 0.50, 0.33, 0.14, 0.35, 0.60, 0.85, 0.90],
+      80: [0.57, 0.45, 0.30, 0.10, 0.10, 0.30, 0.46, 0.54, 0.58, 0.54, 0.40, 0.19, 0.10, 0.35, 0.53, 0.60]
+    };
+
+    const colors = [
+      "black", "black", "black", "black",
+      "red", "red", "red", "red",
+      "red", "red", "red", "red",
+      "black", "black", "black", "black"
+    ];
+
+    const canvas = document.getElementById("dataCanvas");
+    const ctx = canvas.getContext("2d");
+    const centerX = canvas.width / 2;
+    const centerY = canvas.height / 2;
+    const maxRadius = 150;
+    let selectedDataset = Object.keys(datasets)[0];
+    let points = [];
+    let selectedPointValue = null;
+
+    const dataSelect = document.getElementById("dataSelect");
+    Object.keys(datasets).forEach(value => {
+      const option = document.createElement("option");
+      option.value = value;
+      option.textContent = `Ángulo ${value}`;
+      dataSelect.appendChild(option);
+    });
+
+    function drawCircleWithPoints() {
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+      points = [];
+      const data = datasets[selectedDataset];
+      ctx.beginPath();
+      ctx.arc(centerX, centerY, maxRadius, 0, 2 * Math.PI);
+      ctx.strokeStyle = "#000";
+      ctx.lineWidth = 1;
+      ctx.stroke();
+      for (let i = 0; i < data.length; i++) {
+        const angle = i * (2 * Math.PI / data.length);
+        const x = centerX + maxRadius * Math.cos(angle);
+        const y = centerY + maxRadius * Math.sin(angle);
+        points.push({ x, y, value: data[i] });
+        ctx.beginPath();
+        ctx.arc(x, y, 5, 0, 2 * Math.PI);
+        ctx.fillStyle = colors[i % colors.length];
+        ctx.fill();
+        ctx.font = "12px Arial";
+        ctx.fillStyle = "blue";
+        ctx.fillText(data[i].toFixed(2), x + 10, y);
+      }
+    }
+
+    drawCircleWithPoints();
+
+    function calculateResult() {
+      if (selectedPointValue !== null) {
+        const windValue = parseFloat(document.getElementById("windInput").value) || 0;
+        const angleValue = parseFloat(document.getElementById("dataSelect").value);
+        const windEffect = windValue * selectedPointValue;
+        document.getElementById("result").textContent = `VIENTO A FAVOR: ${(angleValue + windEffect).toFixed(2)}`;
+        document.getElementById("result2").textContent = `VIENTO EN CONTRA: ${(angleValue - windEffect).toFixed(2)}`;
+      }
+    }
+
+    canvas.addEventListener("click", function(event) {
+      const rect = canvas.getBoundingClientRect();
+      const clickX = event.clientX - rect.left;
+      const clickY = event.clientY - rect.top;
+      for (let i = 0; i < points.length; i++) {
+        const dist = Math.hypot(points[i].x - clickX, points[i].y - clickY);
+        if (dist <= 10) {
+          selectedPointValue = points[i].value;
+          document.getElementById("info").textContent = `Hiciste clic en: ${selectedPointValue}`;
+          calculateResult();
+          break;
+        }
+      }
+    });
+
+    dataSelect.addEventListener("change", function() {
+      selectedDataset = this.value;
+      drawCircleWithPoints();
+    });
+
+    document.getElementById("windInput").addEventListener("input", calculateResult);
+  </script>
+</body>
+</html>
